@@ -1,6 +1,6 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { ModelType, Message, DebugLog, FileInfo, PaddleOCRConfig } from './types';
+import { ModelType, Message, DebugLog, FileInfo, PaddleOCRConfig, OutputFormat } from './types';
 import Sidebar from './components/Sidebar';
 import ChatWindow from './components/ChatWindow';
 import DebugConsole from './components/DebugConsole';
@@ -9,6 +9,7 @@ import { Terminal, Github } from 'lucide-react';
 const App: React.FC = () => {
   const [selectedModel, setSelectedModel] = useState<ModelType>(ModelType.DEEPSEEK);
   const [temperature, setTemperature] = useState(0.7);
+  const [outputFormat, setOutputFormat] = useState<OutputFormat>(OutputFormat.TEXT);
   const [paddleOCRConfig, setPaddleOCRConfig] = useState<PaddleOCRConfig>({
     apiKey: '',
     apiUrl: 'http://localhost:3001/api/paddleocr/v1/ocr'
@@ -46,8 +47,15 @@ const App: React.FC = () => {
     };
     setMessages(prev => [...prev, userMsg]);
 
+    console.log('=== handleSendMessage called ===');
+    console.log('selectedModel:', selectedModel);
+    console.log('outputFormat:', outputFormat);
+    console.log('ModelType.PADDLEOCR:', ModelType.PADDLEOCR);
+    console.log('selectedModel === ModelType.PADDLEOCR:', selectedModel === ModelType.PADDLEOCR);
+
     try {
       let responseText: string;
+      let msgFormat: 'text' | 'json' | 'html' = 'text';
 
       if (selectedModel === ModelType.PADDLEOCR) {
         if (!files || files.length === 0) {
@@ -92,10 +100,37 @@ const App: React.FC = () => {
 
         const data = await response.json();
         
+        console.log('Output format:', outputFormat);
+        console.log('OutputFormat.TEXT:', OutputFormat.TEXT);
+        console.log('OutputFormat.JSON:', OutputFormat.JSON);
+        console.log('OutputFormat.HTML:', OutputFormat.HTML);
+        
         if (data.result && data.result.layoutParsingResults && data.result.layoutParsingResults.length > 0) {
-          responseText = data.result.layoutParsingResults
-            .map((item: any) => item.markdown?.text || '')
-            .join('\n\n');
+          if (outputFormat === OutputFormat.TEXT) {
+            responseText = data.result.layoutParsingResults
+              .map((item: any) => item.markdown?.text || '')
+              .join('\n\n');
+            msgFormat = 'text';
+          } else if (outputFormat === OutputFormat.JSON) {
+            responseText = JSON.stringify(data.result, null, 2);
+            msgFormat = 'json';
+          } else if (outputFormat === OutputFormat.HTML) {
+            const results = data.result.layoutParsingResults;
+            let html = '<div class="ocr-result">\n';
+            results.forEach((item: any, index: number) => {
+              const text = item.markdown?.text || '';
+              const bbox = item.bbox || [0, 0, 0, 0];
+              html += `  <div class="text-block" data-index="${index}" style="position: absolute; left: ${bbox[0]}px; top: ${bbox[1]}px;">\n`;
+              html += `    ${text}\n`;
+              html += `  </div>\n`;
+            });
+            html += '</div>';
+            responseText = html;
+            msgFormat = 'html';
+          } else {
+            responseText = data.text || data.result || 'No text detected';
+            msgFormat = 'text';
+          }
         } else {
           responseText = data.text || data.result || 'No text detected';
         }
@@ -208,6 +243,7 @@ const App: React.FC = () => {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
         content: responseText,
+        format: msgFormat,
         timestamp: Date.now(),
       };
       setMessages(prev => [...prev, assistantMsg]);
@@ -227,7 +263,7 @@ const App: React.FC = () => {
       };
       setMessages(prev => [...prev, errorMsg]);
     }
-  }, [selectedModel, addLog]);
+  }, [selectedModel, addLog, outputFormat]);
 
   return (
     <div className="flex h-screen w-full bg-[#09090b] text-zinc-100 overflow-hidden font-sans">
@@ -239,6 +275,8 @@ const App: React.FC = () => {
         onTemperatureChange={setTemperature}
         paddleOCRConfig={paddleOCRConfig}
         onPaddleOCRConfigChange={setPaddleOCRConfig}
+        outputFormat={outputFormat}
+        onOutputFormatChange={setOutputFormat}
       />
 
       {/* Main Content Area */}

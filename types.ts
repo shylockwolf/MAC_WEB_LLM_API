@@ -5,10 +5,17 @@ export enum ModelType {
   PADDLEOCR = 'paddleocr',
 }
 
+export enum OutputFormat {
+  TEXT = 'text',
+  JSON = 'json',
+  HTML = 'html',
+}
+
 export interface Message {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
+  format?: 'text' | 'json' | 'html';
   timestamp: number;
   files?: FileInfo[];
 }

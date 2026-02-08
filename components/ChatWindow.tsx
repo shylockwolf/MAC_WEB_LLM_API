@@ -19,7 +19,15 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages, onSend, selectedModel
     switch(selectedModel) {
       case ModelType.DEEPSEEK: return 'DeepSeek';
       case ModelType.KIMI_K25: return 'Kimi K2.5';
+      case ModelType.PADDLEOCR: return 'PaddleOCR';
       default: return 'LLM';
+    }
+  };
+
+  const getPlaceholder = () => {
+    switch(selectedModel) {
+      case ModelType.PADDLEOCR: return '上传图片进行OCR识别...';
+      default: return `向 ${getModelDisplayName()} 提问...`;
     }
   };
 
@@ -108,8 +116,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages, onSend, selectedModel
                 msg.role === 'user' 
                   ? 'bg-indigo-600/10 text-indigo-100 border border-indigo-500/20 rounded-tr-none' 
                   : 'bg-zinc-900 text-zinc-300 border border-zinc-800 rounded-tl-none'
-              }`}>
-                {msg.content}
+              } ${msg.format === 'json' || msg.format === 'text' ? 'whitespace-pre-wrap' : ''} ${msg.format === 'json' ? 'font-mono text-xs' : ''}`}>
+                {msg.format === 'html' ? (
+                  <div className="relative w-full min-h-[300px] max-h-[600px] overflow-auto border border-zinc-700 rounded bg-white text-black p-2" dangerouslySetInnerHTML={{ __html: msg.content }} />
+                ) : (
+                  msg.content
+                )}
                 
                 {msg.files && msg.files.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-2">
@@ -170,7 +182,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages, onSend, selectedModel
                   handleSend();
                 }
               }}
-              placeholder={`向 ${getModelDisplayName()} 提问...`}
+              placeholder={getPlaceholder()}
               rows={1}
               className="flex-1 bg-transparent border-none focus:ring-0 text-sm py-3 resize-none max-h-48 scrollbar-none"
             />

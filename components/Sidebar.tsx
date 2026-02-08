@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
-import { ModelType, PaddleOCRConfig } from '../types';
-import { Layers, Zap, Cpu, History, Settings, ExternalLink, Key, X } from 'lucide-react';
+import { ModelType, PaddleOCRConfig, OutputFormat } from '../types';
+import { Layers, Zap, Cpu, History, Settings, ExternalLink, Key, X, FileText, Code, Globe } from 'lucide-react';
 
 interface SidebarProps {
   selectedModel: ModelType;
@@ -10,9 +10,11 @@ interface SidebarProps {
   onTemperatureChange: (temp: number) => void;
   paddleOCRConfig: PaddleOCRConfig;
   onPaddleOCRConfigChange: (config: PaddleOCRConfig) => void;
+  outputFormat: OutputFormat;
+  onOutputFormatChange: (format: OutputFormat) => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ selectedModel, onSelectModel, temperature, onTemperatureChange, paddleOCRConfig, onPaddleOCRConfigChange }) => {
+const Sidebar: React.FC<SidebarProps> = ({ selectedModel, onSelectModel, temperature, onTemperatureChange, paddleOCRConfig, onPaddleOCRConfigChange, outputFormat, onOutputFormatChange }) => {
   const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
   const [tempApiKey, setTempApiKey] = useState(paddleOCRConfig.apiKey);
   const [tempApiUrl, setTempApiUrl] = useState(paddleOCRConfig.apiUrl);
@@ -98,6 +100,48 @@ const Sidebar: React.FC<SidebarProps> = ({ selectedModel, onSelectModel, tempera
                 className="w-full accent-indigo-500 bg-zinc-800 h-1.5 rounded-lg appearance-none cursor-pointer" 
               />
             </div>
+            
+            {selectedModel === ModelType.PADDLEOCR && (
+              <div className="space-y-2">
+                <label className="text-xs text-zinc-400">Output Format</label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    onClick={() => onOutputFormatChange(OutputFormat.TEXT)}
+                    className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-colors ${
+                      outputFormat === OutputFormat.TEXT
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+                    }`}
+                  >
+                    <FileText size={16} />
+                    <span className="text-xs">Text</span>
+                  </button>
+                  <button
+                    onClick={() => onOutputFormatChange(OutputFormat.JSON)}
+                    className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-colors ${
+                      outputFormat === OutputFormat.JSON
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+                    }`}
+                  >
+                    <Code size={16} />
+                    <span className="text-xs">JSON</span>
+                  </button>
+                  <button
+                    onClick={() => onOutputFormatChange(OutputFormat.HTML)}
+                    className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-colors ${
+                      outputFormat === OutputFormat.HTML
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+                    }`}
+                  >
+                    <Globe size={16} />
+                    <span className="text-xs">HTML</span>
+                  </button>
+                </div>
+              </div>
+            )}
+            
             <div className="space-y-2">
               <label className="text-xs text-zinc-400 flex justify-between">
                 Max Tokens <span>2048</span>
