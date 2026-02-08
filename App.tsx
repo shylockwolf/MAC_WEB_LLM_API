@@ -1,6 +1,6 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { ModelType, Message, DebugLog, FileInfo } from './types';
+import { ModelType, Message, DebugLog, FileInfo, PaddleOCRConfig } from './types';
 import Sidebar from './components/Sidebar';
 import ChatWindow from './components/ChatWindow';
 import DebugConsole from './components/DebugConsole';
@@ -9,6 +9,10 @@ import { Terminal, Github } from 'lucide-react';
 const App: React.FC = () => {
   const [selectedModel, setSelectedModel] = useState<ModelType>(ModelType.DEEPSEEK);
   const [temperature, setTemperature] = useState(0.7);
+  const [paddleOCRConfig, setPaddleOCRConfig] = useState<PaddleOCRConfig>({
+    apiKey: '',
+    apiUrl: 'http://localhost:3001/api/paddleocr/v1/ocr'
+  });
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -45,7 +49,59 @@ const App: React.FC = () => {
     try {
       let responseText: string;
 
-      if (selectedModel === ModelType.DEEPSEEK) {
+      if (selectedModel === ModelType.PADDLEOCR) {
+        if (!files || files.length === 0) {
+          throw new Error('PaddleOCR requires at least one image file');
+        }
+
+        const imageFile = files[0];
+        if (!imageFile.data || !imageFile.type.startsWith('image/')) {
+          throw new Error('PaddleOCR only supports image files');
+        }
+
+        addLog('request', `Send to ${selectedModel}`, {
+          file: imageFile.name,
+          type: imageFile.type,
+          size: imageFile.size
+        });
+
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json'
+        };
+        
+        if (paddleOCRConfig.apiKey) {
+          headers['Authorization'] = `token ${paddleOCRConfig.apiKey}`;
+        }
+        
+        const response = await fetch(paddleOCRConfig.apiUrl, {
+          method: 'POST',
+          headers: headers,
+          body: JSON.stringify({
+            file: imageFile.data,
+            fileType: 1,
+            useDocOrientationClassify: false,
+            useDocUnwarping: false,
+            useChartRecognition: false
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error?.message || 'PaddleOCR API request failed');
+        }
+
+        const data = await response.json();
+        
+        if (data.result && data.result.layoutParsingResults && data.result.layoutParsingResults.length > 0) {
+          responseText = data.result.layoutParsingResults
+            .map((item: any) => item.markdown?.text || '')
+            .join('\n\n');
+        } else {
+          responseText = data.text || data.result || 'No text detected';
+        }
+        
+        addLog('response', `Received from ${selectedModel}`, data);
+      } else if (selectedModel === ModelType.DEEPSEEK) {
         const messages = [{ role: 'user', content }];
         
         addLog('request', `Send to ${selectedModel}`, {
@@ -181,15 +237,21 @@ const App: React.FC = () => {
         onSelectModel={setSelectedModel}
         temperature={temperature}
         onTemperatureChange={setTemperature}
+        paddleOCRConfig={paddleOCRConfig}
+        onPaddleOCRConfigChange={setPaddleOCRConfig}
       />
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col relative overflow-hidden border-x border-zinc-800">
         <header className="h-16 border-b border-zinc-800 flex items-center justify-between px-6 bg-zinc-950/50 backdrop-blur-md z-10">
           <div className="flex items-center gap-3">
-            <div className={`w-3 h-3 rounded-full ${selectedModel === ModelType.KIMI_K25 ? 'bg-emerald-500 shadow-[0_0_10px_#10b981]' : 'bg-blue-500 shadow-[0_0_10px_#3b82f6]'}`} />
+            <div className={`w-3 h-3 rounded-full ${
+              selectedModel === ModelType.PADDLEOCR ? 'bg-orange-500 shadow-[0_0_10px_#f97316]' :
+              selectedModel === ModelType.KIMI_K25 ? 'bg-emerald-500 shadow-[0_0_10px_#10b981]' : 'bg-blue-500 shadow-[0_0_10px_#3b82f6]'
+            }`} />
             <h1 className="font-semibold text-lg">
-              {selectedModel === ModelType.DEEPSEEK ? 'DeepSeek' : 'Kimi K2.5'} Interface
+              {selectedModel === ModelType.PADDLEOCR ? 'PaddleOCR' : 
+               selectedModel === ModelType.DEEPSEEK ? 'DeepSeek' : 'Kimi K2.5'} Interface
             </h1>
           </div>
           <div className="flex items-center gap-4">

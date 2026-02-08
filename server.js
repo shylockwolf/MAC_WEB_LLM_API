@@ -95,6 +95,84 @@ app.post('/api/kimi/v1/chat/completions', async (req, res) => {
   }
 });
 
+app.post('/api/paddleocr/v1/ocr', async (req, res) => {
+  console.log('Received PaddleOCR request');
+  console.log('Request body keys:', Object.keys(req.body));
+  
+  try {
+    const { file, fileType = 1, useDocOrientationClassify = false, useDocUnwarping = false, useChartRecognition = false } = req.body;
+    
+    if (!file) {
+      return res.status(400).json({ error: 'File data is required' });
+    }
+    
+    // 从Authorization header获取API key
+    const authHeader = req.headers.authorization;
+    console.log('Auth header:', authHeader);
+    
+    let apiKey;
+    if (authHeader) {
+      if (authHeader.startsWith('Bearer ')) {
+        apiKey = authHeader.substring(7);
+      } else if (authHeader.startsWith('token ')) {
+        apiKey = authHeader.substring(6);
+      } else {
+        apiKey = authHeader;
+      }
+    } else {
+      apiKey = envVars.PADDLEOCR_API_KEY;
+    }
+    
+    console.log('Extracted API key:', apiKey ? apiKey.substring(0, 10) + '...' : 'empty');
+    
+    if (!apiKey) {
+      return res.status(401).json({ error: 'API key is required' });
+    }
+    
+    console.log('Using PaddleOCR API key:', apiKey.substring(0, 10) + '...');
+    console.log('File data length:', file.length);
+    
+    // 使用百度AI Studio的PaddleOCR API端点
+    const paddleOCRUrl = 'https://u904m5r6w7lbfeb3.aistudio-app.com/layout-parsing';
+    
+    const response = await fetch(paddleOCRUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `token ${apiKey}`
+      },
+      body: JSON.stringify({
+        file: file,
+        fileType: fileType,
+        useDocOrientationClassify: useDocOrientationClassify,
+        useDocUnwarping: useDocUnwarping,
+        useChartRecognition: useChartRecognition
+      }),
+      timeout: 60000
+    });
+    
+    console.log('PaddleOCR response status:', response.status);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('PaddleOCR API error response:', errorText);
+      return res.status(response.status).json({ error: errorText });
+    }
+    
+    const data = await response.json();
+    console.log('PaddleOCR response data:', JSON.stringify(data, null, 2));
+    res.json(data);
+    
+  } catch (error) {
+    console.error('PaddleOCR API error:', error);
+    res.status(500).json({ 
+      error: error.message,
+      type: error.type,
+      code: error.code 
+    });
+  }
+});
+
 const PORT = 3001;
 app.listen(PORT, () => {
   console.log(`Proxy server running on http://localhost:${PORT}`);

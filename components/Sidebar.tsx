@@ -1,27 +1,49 @@
 
-import React from 'react';
-import { ModelType } from '../types';
-import { Layers, Zap, Cpu, History, Settings, ExternalLink } from 'lucide-react';
+import React, { useState } from 'react';
+import { ModelType, PaddleOCRConfig } from '../types';
+import { Layers, Zap, Cpu, History, Settings, ExternalLink, Key, X } from 'lucide-react';
 
 interface SidebarProps {
   selectedModel: ModelType;
   onSelectModel: (model: ModelType) => void;
   temperature: number;
   onTemperatureChange: (temp: number) => void;
+  paddleOCRConfig: PaddleOCRConfig;
+  onPaddleOCRConfigChange: (config: PaddleOCRConfig) => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ selectedModel, onSelectModel, temperature, onTemperatureChange }) => {
+const Sidebar: React.FC<SidebarProps> = ({ selectedModel, onSelectModel, temperature, onTemperatureChange, paddleOCRConfig, onPaddleOCRConfigChange }) => {
+  const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
+  const [tempApiKey, setTempApiKey] = useState(paddleOCRConfig.apiKey);
+  const [tempApiUrl, setTempApiUrl] = useState(paddleOCRConfig.apiUrl);
+
   const models = [
     { type: ModelType.DEEPSEEK, icon: <Zap size={18} className="text-blue-400" />, desc: 'High speed & efficient' },
     { type: ModelType.KIMI_K25, icon: <Cpu size={18} className="text-emerald-400" />, desc: 'Complex reasoning & coding' },
+    { type: ModelType.PADDLEOCR, icon: <Key size={18} className="text-orange-400" />, desc: 'OCR text recognition' },
   ];
 
   const getDisplayName = (type: ModelType) => {
     switch(type) {
       case ModelType.DEEPSEEK: return 'DeepSeek Chat';
       case ModelType.KIMI_K25: return 'Kimi K2.5';
+      case ModelType.PADDLEOCR: return 'PaddleOCR';
       default: return type;
     }
+  };
+
+  const handleSaveApiKey = () => {
+    onPaddleOCRConfigChange({
+      apiKey: tempApiKey,
+      apiUrl: tempApiUrl
+    });
+    setShowApiKeyDialog(false);
+  };
+
+  const handleCancelApiKey = () => {
+    setTempApiKey(paddleOCRConfig.apiKey);
+    setTempApiUrl(paddleOCRConfig.apiUrl);
+    setShowApiKeyDialog(false);
   };
 
   return (
@@ -91,19 +113,77 @@ const Sidebar: React.FC<SidebarProps> = ({ selectedModel, onSelectModel, tempera
             <button className="w-full flex items-center gap-3 px-3 py-2 text-sm text-zinc-400 hover:text-white hover:bg-zinc-900 rounded-lg transition-colors">
               <History size={16} /> Conversation History
             </button>
-            <button className="w-full flex items-center gap-3 px-3 py-2 text-sm text-zinc-400 hover:text-white hover:bg-zinc-900 rounded-lg transition-colors">
-              <Settings size={16} /> Key Management
+            <button 
+              onClick={() => setShowApiKeyDialog(true)}
+              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-zinc-400 hover:text-white hover:bg-zinc-900 rounded-lg transition-colors"
+            >
+              <Key size={16} /> API Key Management
             </button>
           </div>
         </div>
       </div>
+
+      {showApiKeyDialog && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-zinc-900 rounded-xl p-6 w-full max-w-md border border-zinc-700 shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">PaddleOCR API Configuration</h3>
+              <button 
+                onClick={handleCancelApiKey}
+                className="text-zinc-400 hover:text-white transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-2">API URL</label>
+                <input
+                  type="text"
+                  value={tempApiUrl}
+                  onChange={(e) => setTempApiUrl(e.target.value)}
+                  placeholder="https://api.paddleocr.com/v1/ocr"
+                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-2">API Key</label>
+                <input
+                  type="password"
+                  value={tempApiKey}
+                  onChange={(e) => setTempApiKey(e.target.value)}
+                  placeholder="Enter your PaddleOCR API key"
+                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                />
+              </div>
+              
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={handleCancelApiKey}
+                  className="flex-1 px-4 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveApiKey}
+                  className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 transition-colors"
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="p-4 border-t border-zinc-900">
         <div className="bg-zinc-900/50 p-3 rounded-xl border border-zinc-800">
           <p className="text-[10px] text-zinc-500 mb-2">Connection Status</p>
           <div className="flex items-center gap-2 text-xs text-zinc-300">
             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            Gemini API Ready
+            {selectedModel === ModelType.PADDLEOCR ? 'PaddleOCR API Ready' : 'LLM API Ready'}
           </div>
         </div>
       </div>

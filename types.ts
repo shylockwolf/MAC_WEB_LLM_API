@@ -2,6 +2,7 @@
 export enum ModelType {
   DEEPSEEK = 'deepseek-chat',
   KIMI_K25 = 'kimi-k2.5',
+  PADDLEOCR = 'paddleocr',
 }
 
 export interface Message {
@@ -27,4 +28,15 @@ export interface DebugLog {
   model: ModelType;
   title: string;
   payload: any;
+}
+
+export interface OCRResult {
+  text: string;
+  confidence?: number;
+  boxes?: number[][];
+}
+
+export interface PaddleOCRConfig {
+  apiKey: string;
+  apiUrl: string;
 }

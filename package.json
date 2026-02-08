@@ -16,9 +16,13 @@
     "lucide-react": "^0.563.0",
     "mammoth": "^1.11.0",
     "node-fetch": "^3.3.2",
+    "paddleocr": "^1.0.7",
+    "pdfjs": "^2.5.4",
+    "pptxgenjs": "^4.0.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "socks-proxy-agent": "^8.0.5"
+    "socks-proxy-agent": "^8.0.5",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
